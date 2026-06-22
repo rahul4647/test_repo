@@ -1,0 +1,45 @@
+# This is a generated GitHub Actions workflow file for CI
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - name: Setup Node.js
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8
+        with:
+          node-version: '20.x'
+      - name: Cache Node.js modules
+        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea30f
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      - name: Install dependencies
+        run: npm install
+      - name: Run linter
+        run: npm run lint
+      - name: Run unit tests with coverage
+        run: npm run test:coverage
+      - name: Check coverage
+        run: |
+          if [ $(npm run test:coverage | grep 'All files' | awk '{print $4}' | sed 's/%//') -lt ${{ github.event.repository.coverageThreshold }} ]; then
+            echo 'Coverage is less than ${{ github.event.repository.coverageThreshold }}%'
+            exit 1
+          fi
+      - name: Dependency audit
+        run: npm audit
+      - name: Secret scanning
+        run: npx trufflehog .

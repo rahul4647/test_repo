@@ -1,0 +1,7 @@
+# Example Terraform variables file
+aws_region = "us-east-1"
+vpc_cidr = "10.0.0.0/16"
+app_port = 3000
+db_port = 27017
+db_username = "example-username"
+db_password = "example-password"

@@ -1,0 +1,67 @@
+# This is a generated GitHub Actions workflow file for deployment
+name: Deploy
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency: deploy
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ github.event.repository.awsRegion }}
+      - name: Login to DockerHub
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56
+        with:
+          context: .
+          push: true
+          tags: ${{ github.event.repository.dockerRegistry }}/${{ github.event.repository.owner.login }}/${{ github.event.repository.name }}:${{ github.sha }}
+      - name: Deploy to staging
+        run: |
+          # Deploy to staging using Vercel CLI
+          npm install @vercel/cli -g
+          vercel login --token ${{ secrets.VERCEL_TOKEN }}
+          vercel env add
+          vercel build
+          vercel deploy --prebuilt
+      - name: Wait for staging deployment
+        run: |
+          # Wait for staging deployment to complete
+          sleep 30
+      - name: Run smoke tests
+        run: |
+          # Run smoke tests against staging URL
+          npm install playwright -g
+          npm run test:smoke
+      - name: Manual approval
+        uses: actions/manual-approval-action@1.0
+      - name: Deploy to production
+        run: |
+          # Deploy to production using Vercel CLI
+          vercel login --token ${{ secrets.VERCEL_TOKEN }}
+          vercel env add
+          vercel build
+          vercel deploy --prebuilt
+      - name: Rollback
+        if: failure()
+        run: |
+          # Roll back to previous task definition revision
+          vercel login --token ${{ secrets.VERCEL_TOKEN }}
+          vercel rollback
