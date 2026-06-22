@@ -8,24 +8,24 @@ groups:
       severity: warning
     annotations:
       summary: High error rate
-  - alert: HighRequestLatency
+  - alert: HighLatency
+    expr: latency > 500
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: High latency
+  - alert: HighRequestRate
     expr: rate(requests[1m]) > 100
     for: 5m
     labels:
       severity: warning
     annotations:
-      summary: High request latency
-  - alert: HighMemoryUsage
-    expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100 < 10
+      summary: High request rate
+  - alert: LowSaturation
+    expr: saturation < 0.5
     for: 5m
     labels:
       severity: warning
     annotations:
-      summary: High memory usage
-  - alert: HighCPUUsage
-    expr: rate(cpu_usage[1m]) > 80
-    for: 5m
-    labels:
-      severity: warning
-    annotations:
-      summary: High CPU usage
+      summary: Low saturation
