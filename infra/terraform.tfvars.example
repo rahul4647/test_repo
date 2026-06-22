@@ -1,0 +1,4 @@
+region = "us-east-1"
+vpc_id = "vpc-123456"
+ecs_task_execution_role_arn = "arn:aws:iam::123456789012:role/ecsTaskExecutionRole"
+documentdb_cluster_id = "docdb-123456"

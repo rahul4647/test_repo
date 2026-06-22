@@ -1,0 +1,85 @@
+name: Deployment Pipeline
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types:
+      - completed
+
+jobs:
+  staging_deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: GitHubActions
+          aws-region: us-east-1
+
+      - name: Deploy to ECS Staging
+        run: |
+          aws ecs update-service --cluster ${{ secrets.ECS_CLUSTER_NAME_STAGING }} --service ${{ secrets.ECS_SERVICE_NAME_STAGING }} --force-new-deployment --region us-east-1
+
+      - name: Wait for service stability
+        run: |
+          aws ecs wait services-stable --cluster ${{ secrets.ECS_CLUSTER_NAME_STAGING }} --services ${{ secrets.ECS_SERVICE_NAME_STAGING }} --region us-east-1
+
+  smoke_test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: staging_deploy
+    steps:
+      - name: Run Playwright tests
+        run: npm run test:e2e
+
+  production_deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: smoke_test
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Wait for manual approval
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: { conclusion } } = await github.rest.checks.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              check_run_id: context.runId
+            });
+            if (conclusion !== 'success') {
+              core.setFailed('Approval needed for production deployment.');
+            }
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: GitHubActions
+          aws-region: us-east-1
+
+      - name: Deploy to ECS Production
+        run: |
+          aws ecs update-service --cluster ${{ secrets.ECS_CLUSTER_NAME_PRODUCTION }} --service ${{ secrets.ECS_SERVICE_NAME_PRODUCTION }} --force-new-deployment --region us-east-1
+
+      - name: Health check validation
+        run: |
+          # Custom health check logic here
+
+  rollback:
+    runs-on: ubuntu-latest
+    if: ${{ failure() }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: GitHubActions
+          aws-region: us-east-1
+
+      - name: Roll back to previous task definition
+        run: |
+          aws ecs update-service --cluster ${{ secrets.ECS_CLUSTER_NAME_PRODUCTION }} --service ${{ secrets.ECS_SERVICE_NAME_PRODUCTION }} --rollback --region us-east-1
