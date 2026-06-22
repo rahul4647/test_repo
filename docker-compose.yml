@@ -10,24 +10,23 @@ services:
       - mongo
     healthcheck:
       test: ["curl", "--fail", "http://localhost:3000/health"]
-      interval: 30s
+      interval: 10s
       timeout: 5s
       retries: 3
-    volumes:
-      - .:/app
     env_file:
       - .env
   mongo:
-    image: mongo:6.0.3@sha256:4b5c8e9a2f2c9f2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e
+    image: mongo:6.0@sha256:7c5f6d2c6c0f9d2e5f6c7c8d9e0f1a2b3c4d5e6f7c8d9e0f1a2b3c4d5
     volumes:
       - mongo-data:/data/db
     healthcheck:
-      test: ["mongo", "--eval", "db.runCommand({ ping: 1 })"]
-      interval: 30s
+      test: ["mongo", "admin", "--eval", "db.runCommand('ping')"]
+      interval: 10s
       timeout: 5s
       retries: 3
 volumes:
   mongo-data:
+
 networks:
   default:
     driver: bridge

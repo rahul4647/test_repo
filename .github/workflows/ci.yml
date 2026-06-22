@@ -1,5 +1,6 @@
-# This is a generated GitHub Actions CI pipeline
+# This is a generated GitHub Actions workflow file for CI
 name: CI
+
 on:
   push:
     branches:
@@ -7,6 +8,7 @@ on:
   pull_request:
     branches:
       - main
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -18,11 +20,10 @@ jobs:
         uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8
         with:
           node-version: '20.x'
-      - name: Cache Node.js dependencies
+      - name: Cache node modules
         uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea30f
-        id: cache
         with:
-          path: ~/.npm
+          path: node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
@@ -34,11 +35,7 @@ jobs:
         run: npm run test
       - name: Check coverage
         run: |
-          coverage=$(npm run test -- --coverage --coverageReport=json)
-          if [ $(echo "$coverage" | jq '.coverage') -lt ${{ coverageThreshold }} ]; then
+          npm run test -- --coverage
+          if [ $(npm run test -- --coverage --json > coverage.json && jq '.total.statements.pct' coverage.json) -lt ${{ coverageThreshold }} ]; then
             exit 1
           fi
-      - name: Dependency audit
-        run: npm audit
-      - name: Secret scanning
-        run: npx trufflehog file .

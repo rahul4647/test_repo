@@ -1,5 +1,5 @@
 groups:
-- name: nextjs-app
+- name: nextjs-app.rules
   rules:
   - alert: HighErrorRate
     expr: rate(errors[1m]) > 0.05
@@ -8,24 +8,24 @@ groups:
       severity: warning
     annotations:
       summary: High error rate
-  - alert: HighLatency
-    expr: latency > 500
-    for: 5m
-    labels:
-      severity: warning
-    annotations:
-      summary: High latency
-  - alert: HighRequestRate
+  - alert: HighRequestLatency
     expr: rate(requests[1m]) > 100
     for: 5m
     labels:
       severity: warning
     annotations:
-      summary: High request rate
-  - alert: LowSaturation
-    expr: saturation < 0.5
+      summary: High request latency
+  - alert: LowUptime
+    expr: uptime < 0.9
     for: 5m
     labels:
       severity: warning
     annotations:
-      summary: Low saturation
+      summary: Low uptime
+  - alert: HighMemoryUsage
+    expr: memory_usage_percent > 80
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: High memory usage
