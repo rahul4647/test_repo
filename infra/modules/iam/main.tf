@@ -1,37 +1,38 @@
-# Create an IAM role
-resource "aws_iam_role" "this" {
-  name = var.name
+# Create IAM roles and policies
+resource "aws_iam_role" "ecs_task_execution" {
+  name = "my-ecs-task-execution"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
         Action = "sts:AssumeRole"
-        Principal = {
-          Service = var.service
-        }
         Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
       }
     ]
   })
 }
 
-# Create an IAM policy
-resource "aws_iam_policy" "this" {
-  name = var.name
+resource "aws_iam_policy" "ecs_task_execution" {
+  name = "my-ecs-task-execution-policy"
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        Action = var.actions
-        Resource = var.resources
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
         Effect = "Allow"
+        Resource = "arn:aws:logs:*:*:log-group:/ecs/<app>:*"
       }
     ]
   })
 }
 
-# Attach the IAM policy to the IAM role
-resource "aws_iam_role_policy_attachment" "this" {
-  role = aws_iam_role.this.name
-  policy_arn = aws_iam_policy.this.arn
+resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
+  role = aws_iam_role.ecs_task_execution.name
+  policy_arn = aws_iam_policy.ecs_task_execution.arn
 }
