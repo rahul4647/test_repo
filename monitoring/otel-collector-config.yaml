@@ -1,0 +1,28 @@
+receivers:
+  otlp:
+    protocol: http
+    host: 0.0.0.0
+    port: 4317
+exporters:
+  otlp/tempo:
+    endpoint: http://tempo:4317
+    insecure: true
+  prometheus:
+    endpoint: 0.0.0.0:8889
+  loki:
+    endpoint: http://loki:3100/loki/api/v1/push
+    username: ""
+    password: ""
+    tls:
+      insecure: true
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [otlp/tempo]
+    metrics:
+      receivers: [otlp]
+      exporters: [prometheus]
+    logs:
+      receivers: [otlp]
+      exporters: [loki]
