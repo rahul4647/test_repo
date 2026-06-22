@@ -1,0 +1,68 @@
+name: Deployment Pipeline
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  staging_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: us-east-1
+
+      - name: Deploy to ECS staging
+        run: |
+          aws ecs update-service --cluster my-staging-cluster --service my-staging-service --force-new-deployment
+
+      - name: Wait for service stability
+        run: |
+          aws ecs wait services-stable --cluster my-staging-cluster --services my-staging-service
+
+  smoke_test:
+    runs-on: ubuntu-latest
+    needs: staging_deploy
+    steps:
+      - name: Run Playwright tests
+        run: npm run test:e2e -- --baseUrl https://staging.example.com
+
+  production_deploy:
+    runs-on: ubuntu-latest
+    needs: smoke_test
+    if: ${{ github.event.inputs.approved == 'true' }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: us-east-1
+
+      - name: Deploy to ECS production
+        run: |
+          aws ecs update-service --cluster my-production-cluster --service my-production-service --force-new-deployment
+
+      - name: Health check validation
+        run: |
+          aws ecs wait services-stable --cluster my-production-cluster --services my-production-service
+
+  rollback:
+    runs-on: ubuntu-latest
+    needs: production_deploy
+    if: failure()
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: us-east-1
+
+      - name: Roll back to previous task definition
+        run: |
+          # Rollback logic here
