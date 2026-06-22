@@ -1,25 +1,17 @@
 import { registerInstrumentations } from '@opentelemetry/instrumentation';
-import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
-import { Resource } from '@opentelemetry/resources';
-import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
-import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
+import { NodeTracerProvider } from '@opentelemetry/node';
+import { CollectorTraceExporter } from '@opentelemetry/exporter-collector-grpc';
+import { SimpleSpanProcessor } from '@opentelemetry/tracing';
 
-const provider = new NodeTracerProvider({
-  resource: new Resource({
-    [SemanticResourceAttributes.SERVICE_NAME]: 'nextjs-app',
-  }),
-});
-
-const traceExporter = new OTLPTraceExporter({
-  url: 'http://tempo:4317',
-});
-
-provider.addSpanProcessor(new SimpleSpanProcessor(traceExporter));
+const provider = new NodeTracerProvider();
+provider.addSpanProcessor(new SimpleSpanProcessor(new CollectorTraceExporter({ serviceName: 'nextjs-app', url: 'http://tempo:4317' })));
 provider.register();
 
-registerInstrumentations({
-  instrumentations: [
-    new HttpInstrumentation(),
-  ],
+import { instrumentationHook } from 'next/dist/build/webpack/config/instrumentation';
+
+instrumentationHook(() => {
+  registerInstrumentations({
+    tracerProvider: provider,
+    instrumentations: []
+  });
 });
