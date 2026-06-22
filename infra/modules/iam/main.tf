@@ -1,21 +1,26 @@
-resource "aws_iam_role" "ecs_task_execution_role" {
-  name = "${var.app_name}-ecs-task-execution-role"
+resource "aws_iam_role" "ecs_task_execution" {
+  name = "ecsTaskExecutionRole"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
       {
-        Action = "sts:AssumeRole",
         Effect = "Allow",
         Principal = {
           Service = "ecs-tasks.amazonaws.com"
-        }
+        },
+        Action = "sts:AssumeRole"
       }
     ]
   })
 
+  managed_policy_arns = [
+    "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+  ]
+
   inline_policy {
-    name   = "ecs-logs-policy"
+    name = "ScopedLogPolicy"
+
     policy = jsonencode({
       Version = "2012-10-17",
       Statement = [
@@ -25,13 +30,13 @@ resource "aws_iam_role" "ecs_task_execution_role" {
             "logs:CreateLogStream",
             "logs:PutLogEvents"
           ],
-          Resource = "arn:aws:logs:*:*:log-group:/ecs/${var.app_name}:*"
+          Resource = "arn:aws:logs:*:*:log-group:/ecs/app:*"
         }
       ]
     })
   }
+}
 
-  tags = {
-    Name = "${var.app_name}-ecs-task-execution-role"
-  }
+output "ecs_task_execution_role_arn" {
+  value = aws_iam_role.ecs_task_execution.arn
 }
