@@ -1,5 +1,6 @@
+
 provider "aws" {
-  region  = var.region
+  region  = var.aws_region
   version = "~> 5.0"
 }
 
@@ -9,14 +10,21 @@ module "networking" {
 
 module "compute" {
   source = "./modules/compute"
+  vpc_id = module.networking.vpc_id
+  alb_security_group_id = module.networking.alb_security_group_id
+  ecs_security_group_id = module.networking.ecs_security_group_id
 }
 
 module "database" {
   source = "./modules/database"
+  vpc_id = module.networking.vpc_id
+  db_security_group_id = module.networking.db_security_group_id
 }
 
 module "loadbalancer" {
   source = "./modules/loadbalancer"
+  vpc_id = module.networking.vpc_id
+  alb_security_group_id = module.networking.alb_security_group_id
 }
 
 module "iam" {
