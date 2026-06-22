@@ -4,8 +4,8 @@ variable "region" {
   default     = "us-east-1"
 }
 
-variable "app_name" {
-  description = "The name of the application."
+variable "vpc_cidr" {
+  description = "CIDR block for the VPC."
   type        = string
-  default     = "my-nextjs-app"
+  default     = "10.0.0.0/16"
 }

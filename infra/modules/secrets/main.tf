@@ -1,15 +1,18 @@
-resource "aws_secretsmanager_secret" "clerk_webhook_secret" {
-  name = "${var.app_name}-clerk-webhook-secret"
+resource "aws_secretsmanager_secret" "db_password" {
+  name = "db-password"
+
+  recovery_window_in_days = 30
 
   tags = {
-    Name = "${var.app_name}-clerk-webhook-secret"
+    Name = "db-password"
   }
 }
 
-resource "aws_secretsmanager_secret" "mongodb_url" {
-  name = "${var.app_name}-mongodb-url"
+resource "aws_secretsmanager_secret_version" "db_password" {
+  secret_id     = aws_secretsmanager_secret.db_password.id
+  secret_string = var.db_password
+}
 
-  tags = {
-    Name = "${var.app_name}-mongodb-url"
-  }
+variable "db_password" {
+  type = string
 }
