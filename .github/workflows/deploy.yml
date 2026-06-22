@@ -1,0 +1,49 @@
+name: Deployment Pipeline
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  staging_deploy:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/GitHubActionsRole
+          aws-region: us-east-1
+      - name: Deploy to ECS Staging
+        run: echo "Deploying to ECS Staging"
+
+  smoke_test:
+    name: Smoke Test
+    runs-on: ubuntu-latest
+    needs: staging_deploy
+    steps:
+      - name: Run Playwright Tests
+        run: echo "Running Playwright Tests"
+
+  production_deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: smoke_test
+    steps:
+      - name: Manual Approval
+        run: echo "Awaiting manual approval for production deploy"
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+      - name: Deploy to ECS Production
+        run: echo "Deploying to ECS Production"
+
+  rollback:
+    name: Rollback
+    runs-on: ubuntu-latest
+    if: failure()
+    steps:
+      - name: Rollback to Previous Version
+        run: echo "Rolling back to previous version"

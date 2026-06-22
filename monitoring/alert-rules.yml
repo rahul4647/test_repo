@@ -1,0 +1,35 @@
+groups:
+  - name: 'Golden Signals'
+    rules:
+      - alert: HighRequestLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 0.5
+        for: 2m
+        labels:
+          severity: 'warning'
+        annotations:
+          summary: 'High request latency'
+          description: '95th percentile latency is above 500ms for more than 2 minutes.'
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: 'critical'
+        annotations:
+          summary: 'High error rate'
+          description: '5xx error rate is above 5% for more than 2 minutes.'
+      - alert: HighRequestRate
+        expr: rate(http_requests_total[1m]) > 1000
+        for: 1m
+        labels:
+          severity: 'warning'
+        annotations:
+          summary: 'High request rate'
+          description: 'Request rate is above 1000 requests per second.'
+      - alert: LowAvailability
+        expr: (sum by(job)(rate(http_requests_total{status=~"2.."}[5m])) / sum by(job)(rate(http_requests_total[5m]))) < 0.99
+        for: 10m
+        labels:
+          severity: 'critical'
+        annotations:
+          summary: 'Low availability'
+          description: 'Availability is below 99% for more than 10 minutes.'
