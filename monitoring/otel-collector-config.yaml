@@ -6,16 +6,15 @@ receivers:
 exporters:
   otlp/tempo:
     endpoint: http://tempo:4317
-    headers:
-      Authorization: "Bearer <tempo-authorization-token>"
+    insecure: true
   prometheus:
-    endpoint: "0.0.0.0:8889"
+    endpoint: 0.0.0.0:8889
   loki:
     endpoint: http://loki:3100/loki/api/v1/push
-    username: "<loki-username>"
-    password: "<loki-password>"
-    external_labels:
-      job: "otel-collector"
+    username: 
+    password: 
+    tls:
+      insecure: true
 service:
   pipelines:
     traces:
