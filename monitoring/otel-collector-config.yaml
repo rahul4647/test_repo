@@ -1,0 +1,34 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+      grpc:
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'nextjs-app'
+          static_configs:
+            - targets: ['host.docker.internal:3000']
+processors:
+  batch:
+exporters:
+  otlp/tempo:
+    endpoint: 'http://tempo:4317'
+  prometheus:
+    endpoint: '0.0.0.0:8889'
+  loki:
+    endpoint: 'http://loki:3100/loki/api/v1/push'
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/tempo]
+    metrics:
+      receivers: [prometheus]
+      processors: [batch]
+      exporters: [prometheus]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [loki]
