@@ -1,11 +1,19 @@
-# This is a generated GitHub Actions deployment pipeline
+# This is a generated GitHub Actions workflow file for deployment
 name: Deploy
+
 on:
   workflow_run:
     workflows:
       - CI
     branches:
       - main
+    types:
+      - completed
+    jobs:
+      - build-and-test
+    states:
+      - success
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -19,49 +27,27 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ awsRegion }}
-      - name: Login to Docker registry
-        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc
-        with:
-          registry: ${{ dockerRegistry }}
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: Build and push Docker image
-        uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56
-        with:
-          context: .
-          push: true
-          tags: ${{ dockerRegistry }}/${{ github.actor }}/${{ github.event.repository.name }}:${{ github.sha }}
+          aws-region: us-east-1
       - name: Deploy to staging
         run: |
-          # Deploy to staging using the new image tag
-          # This step is placeholder and should be replaced with actual deployment command
-          echo "Deploying to staging..."
+          # Your deployment script to ECS staging goes here
       - name: Wait for service stability
         run: |
-          # Wait for service stability
-          # This step is placeholder and should be replaced with actual wait command
-          echo "Waiting for service stability..."
+          # Your script to wait for service stability goes here
       - name: Run smoke tests
         run: |
-          # Run smoke tests against staging URL
-          # This step is placeholder and should be replaced with actual test command
-          echo "Running smoke tests..."
+          # Your script to run Playwright tests against staging URL goes here
       - name: Manual approval
-        uses: actions/manual-approval@1
+        uses: actions/pause-action@v1
+        with:
+          minutes: 5
       - name: Deploy to production
         run: |
-          # Deploy to production
-          # This step is placeholder and should be replaced with actual deployment command
-          echo "Deploying to production..."
-      - name: Health check
+          # Your deployment script to ECS production goes here
+      - name: Health check validation
         run: |
-          # Health check validation
-          # This step is placeholder and should be replaced with actual health check command
-          echo "Validating health check..."
+          # Your script to validate production health check goes here
       - name: Rollback
         if: failure()
         run: |
-          # Roll back to previous task definition revision
-          # This step is placeholder and should be replaced with actual rollback command
-          echo "Rolling back..."
+          # Your script to roll back to previous task definition revision goes here
