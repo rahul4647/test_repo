@@ -1,30 +1,28 @@
 resource "aws_docdb_cluster" "main" {
-  cluster_identifier = "main-docdb-cluster"
-  master_username    = "${var.db_username}"
-  master_password    = "${var.db_password}"
+  cluster_identifier      = "main-db"
+  engine                  = "docdb"
+  master_username         = "username"
+  master_user_password    = "${var.db_password}"
+  db_subnet_group_name    = "${aws_docdb_subnet_group.main.id}"
   backup_retention_period = 7
   preferred_backup_window = "07:00-09:00"
-  deletion_protection = true
-  storage_encrypted   = true
+  storage_encrypted       = true
+  deletion_protection     = true
+}
 
-  vpc_security_group_ids = [var.security_group_id]
+resource "aws_docdb_subnet_group" "main" {
+  name       = "main-db-subnet-group"
+  subnet_ids = module.networking.subnet_ids
 
   tags = {
-    Name = "main-docdb-cluster"
+    Name = "main-db-subnet-group"
   }
 }
 
 resource "aws_docdb_cluster_instance" "main" {
-  count              = 1
-  identifier         = "main-docdb-instance-${count.index}"
+  identifier         = "main-db-instance"
   cluster_identifier = aws_docdb_cluster.main.id
-  instance_class     = "db.t3.micro"
+  instance_class     = var.db_instance_class
 
-  tags = {
-    Name = "main-docdb-instance-${count.index}"
-  }
-}
-
-output "endpoint" {
-  value = aws_docdb_cluster.main.endpoint
+  apply_immediately = true
 }
