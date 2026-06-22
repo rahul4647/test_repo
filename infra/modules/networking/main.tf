@@ -1,6 +1,6 @@
 # Create a VPC
 resource "aws_vpc" "this" {
-  cidr_block = var.cidr_block
+  cidr_block = "10.0.0.0/16"
   enable_dns_hostnames = true
   enable_dns_support = true
   tags = {
@@ -8,52 +8,20 @@ resource "aws_vpc" "this" {
   }
 }
 
-# Create public subnets
+# Create subnets
 resource "aws_subnet" "public" {
-  count = length(var.public_subnets)
-  cidr_block = var.public_subnets[count.index]
+  count = 2
   vpc_id = aws_vpc.this.id
-  availability_zone = var.availability_zones[count.index]
-  map_public_ip_on_launch = true
+  cidr_block = "10.0.${count.index}.0/24"
+  availability_zone = "us-east-1a"
   tags = {
-    Name = "public-subnet-${count.index}"
+    Name = "my-subnet-${count.index}"
   }
 }
 
-# Create private subnets
-resource "aws_subnet" "private" {
-  count = length(var.private_subnets)
-  cidr_block = var.private_subnets[count.index]
+# Create security groups
+resource "aws_security_group" "vpc" {
   vpc_id = aws_vpc.this.id
-  availability_zone = var.availability_zones[count.index]
-  tags = {
-    Name = "private-subnet-${count.index}"
-  }
-}
-
-# Create a security group
-resource "aws_security_group" "this" {
-  name = "my-security-group"
-  vpc_id = aws_vpc.this.id
-  ingress {
-    from_port = 80
-    to_port = 80
-    protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  
-  egress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-  ingress {
-    from_port = 443
-    to_port = 443
-    protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
   egress {
     from_port = 0
     to_port = 0
@@ -61,6 +29,37 @@ resource "aws_security_group" "this" {
     cidr_blocks = ["0.0.0.0/0"]
   }
   tags = {
-    Name = "my-security-group"
+    Name = "my-vpc-sg"
   }
+}
+
+# Create VPC flow logs
+resource "aws_flow_log" "this" {
+  iam_role_arn = aws_iam_role.vpc_flow_logs.arn
+  log_destination = aws_cloudwatch_log_group.vpc_flow_logs.arn
+  log_destination_type = "cloud-watch-logs"
+  traffic_type = "ALL"
+  vpc_id = aws_vpc.this.id
+}
+
+# Create IAM role for VPC flow logs
+resource "aws_iam_role" "vpc_flow_logs" {
+  name = "my-vpc-flow-logs"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "vpc-flow-logs.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+# Create CloudWatch log group for VPC flow logs
+resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
+  name = "my-vpc-flow-logs"
 }
