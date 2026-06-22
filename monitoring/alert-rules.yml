@@ -1,0 +1,31 @@
+groups:
+- name: nextjs-app-alerts
+  rules:
+  - alert: HighErrorRate
+    expr: rate(errors_total[1m]) > 0.05
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: High error rate
+  - alert: HighRequestLatency
+    expr: rate(requests_latency_seconds_bucket[1m]) > 0.5
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: High request latency
+  - alert: HighMemoryUsage
+    expr: node_memory_MemTotal_bytes - node_memory_MemFree_bytes > (node_memory_MemTotal_bytes * 0.8)
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: High memory usage
+  - alert: HighCpuUsage
+    expr: (100 - (100 * idle)) > 80
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: High CPU usage
