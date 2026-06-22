@@ -1,0 +1,68 @@
+name: Deployment Pipeline
+
+on:
+  workflow_run:
+    workflows: ['CI Pipeline']
+    types:
+      - completed
+
+jobs:
+  staging_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: us-east-1
+
+      - name: Deploy to ECS Staging
+        run: |
+          aws ecs update-service --cluster my-staging-cluster --service my-staging-service --force-new-deployment
+
+  smoke_test:
+    runs-on: ubuntu-latest
+    needs: staging_deploy
+    steps:
+      - name: Run smoke tests
+        run: npm run smoke-test
+
+  production_deploy:
+    runs-on: ubuntu-latest
+    needs: smoke_test
+    environment:
+      name: production
+      url: ${{ secrets.PRODUCTION_URL }}
+    steps:
+      - name: Manual approval
+        uses: actions/github-script@v4
+        with:
+          script: |
+            const { context, github } = require('@actions/github');
+            const { owner, repo } = context.repo;
+            const comment = 'Deployment to production requires manual approval.';
+            await github.issues.createComment({
+              owner,
+              repo,
+              issue_number: context.issue.number,
+              body: comment,
+            });
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: us-east-1
+
+      - name: Deploy to ECS Production
+        run: |
+          aws ecs update-service --cluster my-production-cluster --service my-production-service --force-new-deployment
+
+  rollback:
+    runs-on: ubuntu-latest
+    if: failure()
+    needs: production_deploy
+    steps:
+      - name: Rollback to previous revision
+        run: |
+          aws ecs update-service --cluster my-production-cluster --service my-production-service --task-definition my-task:previous
