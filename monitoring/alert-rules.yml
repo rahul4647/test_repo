@@ -1,35 +1,38 @@
 groups:
-  - name: four-golden-signals
+  - name: 'Four Golden Signals'
     rules:
-      - alert: HighLatency
-        expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="nextjs-app"}[5m])) by (le)) > 1
-        for: 5m
+      - alert: HighRequestLatency
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job='nextjs-app'}[5m])) by (le)) > 1
+        for: 10m
         labels:
-          severity: warning
+          severity: 'warning'
         annotations:
-          summary: "High request latency"
-          description: "The 99th percentile request latency is above 1s."
+          summary: 'High request latency on nextjs-app'
+          description: 'Request latency is above 1s for 95th percentile over the last 10 minutes.'
+
       - alert: HighErrorRate
-        expr: sum(rate(http_requests_total{job="nextjs-app",status=~"5.."}[5m])) / sum(rate(http_requests_total{job="nextjs-app"}[5m])) > 0.05
-        for: 5m
+        expr: sum(rate(http_requests_total{job='nextjs-app',status=~"5.."}[5m])) by (job) / sum(rate(http_requests_total{job='nextjs-app'}[5m])) by (job) > 0.05
+        for: 10m
         labels:
-          severity: warning
+          severity: 'critical'
         annotations:
-          summary: "High error rate"
-          description: "More than 5% of requests are failing."
-      - alert: HighThroughput
-        expr: sum(rate(http_requests_total{job="nextjs-app"}[5m])) > 100
-        for: 5m
+          summary: 'High error rate on nextjs-app'
+          description: 'Error rate is above 5% over the last 10 minutes.'
+
+      - alert: LowThroughput
+        expr: sum(rate(http_requests_total{job='nextjs-app'}[5m])) < 10
+        for: 10m
         labels:
-          severity: info
+          severity: 'warning'
         annotations:
-          summary: "High request throughput"
-          description: "The request throughput is above 100 requests per second."
-      - alert: Saturation
-        expr: (sum(rate(http_requests_total{job="nextjs-app"}[5m])) by (instance)) / ignoring(instance) group_left sum(machine_cpu_cores) > 0.9
-        for: 5m
+          summary: 'Low throughput on nextjs-app'
+          description: 'Request throughput is below 10 requests per second over the last 10 minutes.'
+
+      - alert: HighRequestLatency95th
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job='nextjs-app'}[5m])) by (le)) > 1
+        for: 10m
         labels:
-          severity: warning
+          severity: 'critical'
         annotations:
-          summary: "High CPU saturation"
-          description: "CPU saturation is above 90%."
+          summary: '95th percentile latency on nextjs-app'
+          description: 'Request latency is above 1s for 95th percentile over the last 10 minutes.'
