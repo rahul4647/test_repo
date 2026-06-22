@@ -1,0 +1,68 @@
+name: Deployment Pipeline
+
+on:
+  workflow_run:
+    workflows:
+      - CI Pipeline
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  staging_deploy:
+    name: Staging Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/GitHubActionsRole
+          role-session-name: GitHubActions
+          aws-region: us-east-1
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service --cluster my-cluster --service my-service --force-new-deployment
+
+  smoke_test:
+    name: Smoke Test
+    runs-on: ubuntu-latest
+    needs: staging_deploy
+    steps:
+      - name: Run Playwright tests
+        run: npm run test:smoke
+
+  production_deploy:
+    name: Production Deploy
+    runs-on: ubuntu-latest
+    needs: smoke_test
+    environment:
+      name: production
+      url: https://myapp.com
+    steps:
+      - name: Manual approval
+        uses: actions/github-script@v5
+        with:
+          script: |
+            const { Octokit } = require("@octokit/rest");
+            const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+            const { data: { check_runs } } = await octokit.checks.listForRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.sha
+            });
+            if (!check_runs.some(run => run.conclusion === 'success')) {
+              throw new Error('Approval is required to proceed.');
+            }
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service --cluster my-cluster --service my-service --force-new-deployment
+
+  rollback:
+    name: Rollback
+    runs-on: ubuntu-latest
+    if: failure()
+    steps:
+      - name: Roll back to previous revision
+        run: |
+          aws ecs update-service --cluster my-cluster --service my-service --task-definition $(aws ecs describe-services --cluster my-cluster --services my-service --query 'services[0].taskDefinition' --output text)
