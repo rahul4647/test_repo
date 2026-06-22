@@ -1,0 +1,88 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+
+jobs:
+  staging_deploy:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    timeout-minutes: 30
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.AWS_ROLE }}
+          aws-region: us-east-1
+
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service \
+            --cluster my-cluster \
+            --service my-service \
+            --force-new-deployment \
+            --region us-east-1
+
+  smoke_test:
+    name: Smoke Test
+    runs-on: ubuntu-latest
+    needs: staging_deploy
+    timeout-minutes: 30
+
+    steps:
+      - name: Run Playwright tests
+        run: npm run test:smoke
+
+  production_deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: smoke_test
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: https://production.example.com
+
+    steps:
+      - name: Manual approval
+        uses: hmarr/auto-approve-action@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.AWS_ROLE }}
+          aws-region: us-east-1
+
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service \
+            --cluster my-cluster \
+            --service my-service \
+            --force-new-deployment \
+            --region us-east-1
+
+  rollback:
+    name: Rollback
+    runs-on: ubuntu-latest
+    if: failure()
+    needs: production_deploy
+    timeout-minutes: 30
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.AWS_ROLE }}
+          aws-region: us-east-1
+
+      - name: Rollback to previous task definition
+        run: |
+          aws ecs update-service \
+            --cluster my-cluster \
+            --service my-service \
+            --task-definition my-service:previous \
+            --region us-east-1
