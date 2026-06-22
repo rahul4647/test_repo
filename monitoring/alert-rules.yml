@@ -1,0 +1,31 @@
+groups:
+  - name: 'four_golden_signals'
+    rules:
+      - alert: HighLatency
+        expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="nextjs-app"}[5m])) by (le)) > 1.5
+        for: 2m
+        labels:
+          severity: 'page'
+        annotations:
+          summary: 'High request latency'
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{job="nextjs-app", status=~"5.."}[5m]) > 0.05
+        for: 10m
+        labels:
+          severity: 'page'
+        annotations:
+          summary: 'High error rate'
+      - alert: HighRequestRate
+        expr: sum(rate(http_requests_total{job="nextjs-app"}[5m])) by (job) > 100
+        for: 10m
+        labels:
+          severity: 'info'
+        annotations:
+          summary: 'High request rate'
+      - alert: SaturatedCPU
+        expr: sum(rate(process_cpu_seconds_total{job="nextjs-app"}[5m])) by (instance) > 0.9
+        for: 5m
+        labels:
+          severity: 'warning'
+        annotations:
+          summary: 'CPU saturation'
