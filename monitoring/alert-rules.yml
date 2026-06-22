@@ -1,0 +1,31 @@
+groups:
+  - name: 'four-golden-signals'
+    rules:
+      - alert: HighLatency
+        expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="nextjs-app"}[5m])) by (le)) > 1
+        for: 5m
+        labels:
+          severity: 'warning'
+        annotations:
+          summary: 'High request latency'
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{job="nextjs-app", status=~"5.."}[5m]) / rate(http_requests_total{job="nextjs-app"}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: 'critical'
+        annotations:
+          summary: 'High error rate'
+      - alert: LowAvailability
+        expr: (1 - rate(http_requests_total{job="nextjs-app", status=~"2.."}[5m]) / rate(http_requests_total{job="nextjs-app"}[5m])) > 0.01
+        for: 10m
+        labels:
+          severity: 'critical'
+        annotations:
+          summary: 'Low availability'
+      - alert: HighRequestRate
+        expr: rate(http_requests_total{job="nextjs-app"}[1m]) > 100
+        for: 1m
+        labels:
+          severity: 'info'
+        annotations:
+          summary: 'High request rate'

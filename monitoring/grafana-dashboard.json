@@ -1,0 +1,52 @@
+{
+  "id": null,
+  "title": "Next.js App Dashboard",
+  "panels": [
+    {
+      "type": "graph",
+      "title": "Request Latency",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job='nextjs-app'}[5m])) by (le))",
+          "legendFormat": "99th percentile"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Error Rate",
+      "targets": [
+        {
+          "expr": "rate(http_requests_total{job='nextjs-app',status=~'5..'}[5m]) / rate(http_requests_total{job='nextjs-app'}[5m])",
+          "legendFormat": "Error Rate"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Availability",
+      "targets": [
+        {
+          "expr": "(1 - rate(http_requests_total{job='nextjs-app',status=~'2..'}[5m]) / rate(http_requests_total{job='nextjs-app'}[5m]))",
+          "legendFormat": "Availability"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Request Rate",
+      "targets": [
+        {
+          "expr": "rate(http_requests_total{job='nextjs-app'}[1m])",
+          "legendFormat": "Request Rate"
+        }
+      ]
+    }
+  ],
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "schemaVersion": 16,
+  "version": 1
+}

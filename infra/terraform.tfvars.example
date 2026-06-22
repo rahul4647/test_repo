@@ -1,0 +1,5 @@
+vpc_id = "vpc-xxxxxx"
+alb_security_group_id = "sg-xxxxxx"
+ecs_security_group_id = "sg-xxxxxx"
+database_security_group_id = "sg-xxxxxx"
+region = "us-east-1"
