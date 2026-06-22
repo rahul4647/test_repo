@@ -1,0 +1,67 @@
+name: Deploy Pipeline
+
+on:
+  workflow_run:
+    workflows:
+      - CI Pipeline
+    types:
+      - completed
+
+jobs:
+  staging_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/OIDC-Role
+          aws-region: us-east-1
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service --cluster my-cluster --service my-service --force-new-deployment --region us-east-1
+
+  smoke_test:
+    runs-on: ubuntu-latest
+    needs: staging_deploy
+    steps:
+      - name: Run Playwright tests
+        run: npm run test:smoke
+
+  production_deploy:
+    runs-on: ubuntu-latest
+    needs: smoke_test
+    if: success()
+    steps:
+      - name: Manual approval
+        uses: actions/github-script@v5
+        with:
+          script: |
+            const { data: { conclusion } } = await github.checks.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              check_run_id: context.payload.check_run.id
+            });
+            if (conclusion !== 'success') {
+              throw new Error('Approval not granted.');
+            }
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/OIDC-Role
+          aws-region: us-east-1
+      - name: Deploy to ECS production
+        run: |
+          aws ecs update-service --cluster my-cluster-prod --service my-service-prod --force-new-deployment --region us-east-1
+
+  rollback:
+    runs-on: ubuntu-latest
+    if: failure()
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/OIDC-Role
+          aws-region: us-east-1
+      - name: Roll back to previous task definition
+        run: |
+          aws ecs update-service --cluster my-cluster-prod --service my-service-prod --task-definition my-service-prod:previous --region us-east-1

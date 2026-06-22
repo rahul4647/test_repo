@@ -1,0 +1,5 @@
+region = "us-east-1"
+vpc_id = "vpc-123456"
+alb_subnet_ids = ["subnet-abc123", "subnet-def456"]
+ecs_subnet_ids = ["subnet-ghi789", "subnet-jkl012"]
+db_subnet_ids = ["subnet-mno345", "subnet-pqr678"]
