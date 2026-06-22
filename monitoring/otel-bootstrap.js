@@ -1,12 +1,8 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { instrumentationHook } from '@opentelemetry/instrumentation-next';
+import { registerOTel } from '@vercel/otel-nextjs';
 
-export const instrumentation = instrumentationHook({
-  enabled: true,
-  logger: console,
+registerOTel({
   serviceName: 'nextjs-app',
+  instrumentationHook: () => {
+    // Additional instrumentation can be added here
+  }
 });
-
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  res.status(200).json({ name: 'OTel Bootstrap' });
-}
