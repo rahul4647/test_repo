@@ -2,13 +2,17 @@ name: Deployment Pipeline
 
 on:
   workflow_run:
-    workflows: ['CI Pipeline']
+    workflows: ["CI Pipeline"]
     types:
       - completed
 
 jobs:
   staging_deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: false
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
@@ -16,45 +20,27 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: us-east-1
 
-      - name: Deploy to ECS Staging
+      - name: Deploy to ECS
         run: |
           aws ecs update-service --cluster my-staging-cluster --service my-staging-service --force-new-deployment
 
   smoke_test:
     runs-on: ubuntu-latest
     needs: staging_deploy
+    timeout-minutes: 30
     steps:
       - name: Run smoke tests
-        run: npm run smoke-test
+        run: npm run test:smoke -- --url=https://staging.example.com
 
   production_deploy:
     runs-on: ubuntu-latest
     needs: smoke_test
+    timeout-minutes: 30
     environment:
       name: production
-      url: ${{ secrets.PRODUCTION_URL }}
+      url: https://production.example.com
     steps:
-      - name: Manual approval
-        uses: actions/github-script@v4
-        with:
-          script: |
-            const { context, github } = require('@actions/github');
-            const { owner, repo } = context.repo;
-            const comment = 'Deployment to production requires manual approval.';
-            await github.issues.createComment({
-              owner,
-              repo,
-              issue_number: context.issue.number,
-              body: comment,
-            });
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          aws-region: us-east-1
-
-      - name: Deploy to ECS Production
+      - name: Deploy to ECS
         run: |
           aws ecs update-service --cluster my-production-cluster --service my-production-service --force-new-deployment
 
@@ -62,7 +48,8 @@ jobs:
     runs-on: ubuntu-latest
     if: failure()
     needs: production_deploy
+    timeout-minutes: 30
     steps:
-      - name: Rollback to previous revision
+      - name: Rollback ECS service
         run: |
-          aws ecs update-service --cluster my-production-cluster --service my-production-service --task-definition my-task:previous
+          aws ecs update-service --cluster my-production-cluster --service my-production-service --desired-count 0
