@@ -1,0 +1,46 @@
+{
+  "id": null,
+  "title": "Next.js App Overview",
+  "panels": [
+    {
+      "type": "graph",
+      "title": "Request Latency",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job='nextjs-app'}[5m])) by (le))",
+          "legendFormat": "p99 latency"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Error Rate",
+      "targets": [
+        {
+          "expr": "rate(http_requests_total{job='nextjs-app',status=~'5..'}[5m])",
+          "legendFormat": "error rate"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Request Rate",
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{job='nextjs-app'}[5m])) by (job)",
+          "legendFormat": "request rate"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "CPU Usage",
+      "targets": [
+        {
+          "expr": "sum(rate(process_cpu_seconds_total{job='nextjs-app'}[5m])) by (instance)",
+          "legendFormat": "CPU usage"
+        }
+      ]
+    }
+  ]
+}
