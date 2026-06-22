@@ -1,55 +1,45 @@
+
 resource "aws_ecs_cluster" "main" {
   name = "main-cluster"
 }
 
-resource "aws_ecs_service" "main" {
-  name            = "main-service"
-  cluster         = aws_ecs_cluster.main.id
-  desired_count   = 1
-  launch_type     = "FARGATE"
-  task_definition = aws_ecs_task_definition.main.arn
-}
-
-resource "aws_ecs_task_definition" "main" {
-  family                   = "main-task"
+resource "aws_ecs_task_definition" "app" {
+  family                   = "app-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "512"
   memory                   = "1024"
+  execution_role_arn       = module.iam.ecs_execution_role_arn
   container_definitions    = jsonencode([
     {
-      name  = "app-container"
-      image = "node:20-alpine@sha256:<image-digest>"
-      portMappings = [
-        {
-          containerPort = var.app_port
-          hostPort      = var.app_port
-        }
-      ]
+      name      = "app-container"
+      image     = "node:20@sha256:example"
+      portMappings = [{
+        containerPort = 3000
+        hostPort      = 3000
+      }]
       environment = [
         {
-          name  = "NODE_ENV"
-          value = "production"
+          name  = "NEXT_CLERK_WEBHOOK_SECRET"
+          value = var.next_clerk_webhook_secret
+        },
+        {
+          name  = "MONGODB_URL"
+          value = var.mongodb_url
         }
       ]
     }
   ])
 }
 
-resource "aws_security_group" "ecs_sg" {
-  vpc_id = module.networking.vpc_id
+resource "aws_ecs_service" "app" {
+  cluster        = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.app.arn
+  desired_count  = 1
+  launch_type    = "FARGATE"
 
-  egress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 27017
-    to_port     = 27017
-    protocol    = "tcp"
-    security_groups = [aws_security_group.db_sg.id]
+  network_configuration {
+    subnets         = var.ecs_subnets
+    security_groups = [aws_security_group.ecs_sg.id]
   }
 }

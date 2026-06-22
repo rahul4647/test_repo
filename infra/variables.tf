@@ -1,29 +1,36 @@
-variable "region" {
-  description = "The AWS region to deploy resources in."
+
+variable "aws_region" {
+  description = "The AWS region to deploy in."
   type        = string
-  default     = "us-east-1"
 }
 
-variable "app_port" {
-  description = "The port the application listens on."
-  type        = number
-  default     = 3000
-}
-
-variable "db_port" {
-  description = "The port the DocumentDB instance listens on."
-  type        = number
-  default     = 27017
-}
-
-variable "db_instance_class" {
-  description = "The instance class for DocumentDB."
+variable "vpc_cidr" {
+  description = "CIDR block for the VPC."
   type        = string
-  default     = "db.t3.micro"
+  default     = "10.0.0.0/16"
 }
 
-variable "db_storage" {
-  description = "The storage size for DocumentDB in gigabytes."
-  type        = number
-  default     = 20
+variable "alb_subnets" {
+  description = "Subnets for ALB."
+  type        = list(string)
+}
+
+variable "ecs_subnets" {
+  description = "Subnets for ECS."
+  type        = list(string)
+}
+
+variable "db_subnets" {
+  description = "Subnets for Database."
+  type        = list(string)
+}
+
+variable "next_clerk_webhook_secret" {
+  description = "Secret for Clerk Webhook."
+  type        = string
+}
+
+variable "mongodb_url" {
+  description = "URL for MongoDB connection."
+  type        = string
 }

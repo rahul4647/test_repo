@@ -1,5 +1,8 @@
-region = "us-east-1"
-app_port = 3000
-db_port = 27017
-db_instance_class = "db.t3.micro"
-db_storage = 20
+
+aws_region = "us-east-1"
+vpc_cidr = "10.0.0.0/16"
+alb_subnets = ["subnet-abc123", "subnet-def456"]
+ecs_subnets = ["subnet-ghi789", "subnet-jkl012"]
+db_subnets = ["subnet-mno345", "subnet-pqr678"]
+next_clerk_webhook_secret = "your-clerk-webhook-secret"
+mongodb_url = "mongodb://your-mongodb-url"
