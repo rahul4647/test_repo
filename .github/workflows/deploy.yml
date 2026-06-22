@@ -1,0 +1,56 @@
+# This is a generated GitHub Actions workflow file.
+name: Deploy
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    branches:
+      - main
+    types:
+      - completed
+    jobs:
+      - build-and-test
+    states:
+      - success
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency: deploy
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ awsRegion }}
+    - name: Deploy to staging
+      run: |
+        # Deploy to staging using ECS
+        aws ecs update-service --cluster ${STAGING_CLUSTER} --service ${STAGING_SERVICE} --task-definition ${STAGING_TASK_DEFINITION}
+        aws ecs wait service-stable --cluster ${STAGING_CLUSTER} --service ${STAGING_SERVICE}
+    - name: Run smoke tests
+      run: |
+        # Run Playwright tests against staging URL
+        npm run test:smoke
+    - name: Manual approval
+      uses: actions/manual-approval@2
+      with:
+        approval-type: 'Approve production deployment'
+    - name: Deploy to production
+      run: |
+        # Deploy to production using ECS
+        aws ecs update-service --cluster ${PRODUCTION_CLUSTER} --service ${PRODUCTION_SERVICE} --task-definition ${PRODUCTION_TASK_DEFINITION}
+        aws ecs wait service-stable --cluster ${PRODUCTION_CLUSTER} --service ${PRODUCTION_SERVICE}
+    - name: Health check
+      run: |
+        # Run health check validation
+        aws ecs describe-services --cluster ${PRODUCTION_CLUSTER} --services ${PRODUCTION_SERVICE}
+        if [ $(aws ecs describe-services --cluster ${PRODUCTION_CLUSTER} --services ${PRODUCTION_SERVICE} --query 'services[0].status' --output text) != 'ACTIVE' ]; then
+          echo 'Health check failed'
+          exit 1
+        fi
