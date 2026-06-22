@@ -13,16 +13,24 @@ exporters:
     endpoint: http://loki:3100/loki/api/v1/push
     username: ""
     password: ""
-    tls:
-      insecure: true
+    tenant_id: ""
+    labels:
+      job: "otel-collector"
+      service: "nextjs-app"
+processors:
+  batch:
+    timeout: 10s
 service:
   pipelines:
     traces:
       receivers: [otlp]
+      processors: [batch]
       exporters: [otlp/tempo]
     metrics:
       receivers: [otlp]
+      processors: [batch]
       exporters: [prometheus]
     logs:
       receivers: [otlp]
+      processors: [batch]
       exporters: [loki]
