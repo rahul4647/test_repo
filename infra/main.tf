@@ -8,24 +8,22 @@ module "networking" {
 }
 
 module "compute" {
-  source      = "./modules/compute"
-  vpc_id      = module.networking.vpc_id
-  subnet_ids  = module.networking.private_subnet_ids
-  security_groups = [module.networking.ecs_security_group_id]
+  source = "./modules/compute"
+  vpc_id = module.networking.vpc_id
+  ecs_sg_id = module.networking.ecs_sg_id
+  alb_sg_id = module.networking.alb_sg_id
 }
 
 module "database" {
   source = "./modules/database"
   vpc_id = module.networking.vpc_id
-  subnet_ids = module.networking.private_subnet_ids
-  security_group_id = module.networking.db_security_group_id
+  db_sg_id = module.networking.db_sg_id
 }
 
 module "loadbalancer" {
   source = "./modules/loadbalancer"
   vpc_id = module.networking.vpc_id
-  subnet_ids = module.networking.public_subnet_ids
-  security_group_id = module.networking.alb_security_group_id
+  alb_sg_id = module.networking.alb_sg_id
 }
 
 module "iam" {

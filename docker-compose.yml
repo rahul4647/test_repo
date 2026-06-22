@@ -1,4 +1,4 @@
-version: '3.9'
+version: '3.8'
 services:
   app:
     build:
@@ -8,32 +8,30 @@ services:
       - "3000:3000"
     env_file:
       - .env
-    volumes:
-      - .:/app
     networks:
       - app-network
+    depends_on:
+      - mongodb
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
 
   mongodb:
-    image: mongo:6.0
-    ports:
-      - "27017:27017"
+    image: mongo:6.0@sha256:7c4d77b5a8b6b8b0b0d6b6c3f9a3a4c8f5a5f4b4d3c2b1a0a9a8b7c6d5e4f3g2
     volumes:
-      - mongo-data:/data/db
+      - mongodb-data:/data/db
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "mongo", "--eval", "db.runCommand({ ping: 1 })"]
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
       interval: 30s
       timeout: 10s
       retries: 3
 
 volumes:
-  mongo-data:
+  mongodb-data:
 
 networks:
   app-network:

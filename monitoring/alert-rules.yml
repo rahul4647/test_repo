@@ -1,34 +1,31 @@
 groups:
-  - name: 'four-golden-signals'
+  - name: 'four_golden_signals'
     rules:
       - alert: HighLatency
-        expr: histogram_quantile(0.9, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 0.5
-        for: 10m
+        expr: histogram_quantile(0.9, rate(http_request_duration_seconds_bucket[5m])) > 0.5
+        for: 2m
         labels:
-          severity: 'warning'
+          severity: 'critical'
         annotations:
           summary: 'High request latency'
-
       - alert: HighErrorRate
-        expr: sum(rate(http_requests_total{status_code=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) > 0.05
-        for: 10m
+        expr: rate(http_requests_total{status!~"2.."}[5m]) > 0.05
+        for: 2m
         labels:
           severity: 'critical'
         annotations:
           summary: 'High error rate'
-
       - alert: HighRequestRate
-        expr: sum(rate(http_requests_total[5m])) > 100
-        for: 10m
+        expr: rate(http_requests_total[1m]) > 1000
+        for: 2m
         labels:
-          severity: 'info'
+          severity: 'warning'
         annotations:
           summary: 'High request rate'
-
-      - alert: Saturation
-        expr: node_load1 / count(count(node_cpu_seconds_total) by (cpu)) * 100 > 90
-        for: 10m
+      - alert: HighSaturation
+        expr: node_cpu_seconds_total{mode="idle"}[5m] < 0.2
+        for: 2m
         labels:
-          severity: 'critical'
+          severity: 'warning'
         annotations:
           summary: 'High CPU saturation'
