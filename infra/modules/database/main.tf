@@ -1,17 +1,32 @@
 # Create a DocumentDB instance
-resource "aws_docdb_cluster" "this" {
-  cluster_identifier = var.cluster_identifier
-  engine = var.engine
-  instance_class = var.instance_class
-  storage = var.storage
-  multi_az = var.multi_az
-  backup_retention = var.backup_retention
-  deletion_protection = var.deletion_protection
-  encryption_at_rest = var.encryption_at_rest
+resource "aws_documentdb_cluster" "this" {
+  cluster_identifier = "my-documentdb-cluster"
+  engine = var.db_engine
+  master_username = "my-master-username"
+  master_password = "my-master-password"
+  instance_class = "db.t3.medium"
+  storage_encrypted = true
+  deletion_protection = true
+  vpc_security_group_ids = [aws_security_group.documentdb.id]
+  db_subnet_group_name = aws_db_subnet_group.this.name
 }
 
-# Create a DocumentDB subnet group
-resource "aws_docdb_subnet_group" "this" {
-  name = "my-subnet-group"
-  subnet_ids = var.subnet_ids
+# Create a security group for DocumentDB
+resource "aws_security_group" "documentdb" {
+  vpc_id = var.vpc_id
+  egress {
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  tags = {
+    Name = "my-documentdb-sg"
+  }
+}
+
+# Create a DB subnet group
+resource "aws_db_subnet_group" "this" {
+  name = "my-documentdb-subnet-group"
+  subnet_ids = [aws_subnet.public[0].id]
 }
