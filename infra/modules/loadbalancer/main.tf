@@ -1,27 +1,31 @@
-# Create an ELB
+# Create an ALB
 resource "aws_alb" "this" {
-  name = var.name
-  subnets = var.subnets
-  security_groups = var.security_groups
-  internal = false
+  name = "my-alb"
+  subnets = [aws_subnet.public[0].id]
+  security_groups = [aws_security_group.alb.id]
 }
 
-# Create an ELB target group
-resource "aws_alb_target_group" "this" {
-  name = "my-target-group"
-  port = 3000
-  protocol = "HTTP"
+# Create a security group for ALB
+resource "aws_security_group" "alb" {
   vpc_id = var.vpc_id
-  health_check {
-    healthy_threshold = 5
-    unhealthy_threshold = 2
-    timeout = 5
-    interval = 10
-    path = "/health"
+  egress {
+    from_port = 80
+    to_port = 80
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    from_port = 443
+    to_port = 443
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  tags = {
+    Name = "my-alb-sg"
   }
 }
 
-# Create an ELB listener
+# Create an ALB listener
 resource "aws_alb_listener" "this" {
   load_balancer_arn = aws_alb.this.arn
   port = 80
@@ -32,7 +36,18 @@ resource "aws_alb_listener" "this" {
   }
 }
 
-# Create an ELB listener rule
+# Create an ALB target group
+resource "aws_alb_target_group" "this" {
+  name = "my-alb-target-group"
+  port = var.app_port
+  protocol = "HTTP"
+  vpc_id = var.vpc_id
+  health_check {
+    path = "/health"
+  }
+}
+
+# Create an ALB listener rule
 resource "aws_alb_listener_rule" "this" {
   listener_arn = aws_alb_listener.this.arn
   priority = 1
@@ -41,8 +56,7 @@ resource "aws_alb_listener_rule" "this" {
     type = "forward"
   }
   condition {
-    path_pattern {
-      values = ["*"]
-    }
+    field = "path-pattern"
+    values = ["/health"]
   }
 }

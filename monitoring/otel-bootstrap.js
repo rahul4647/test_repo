@@ -1,23 +1,16 @@
-import { initInstrumentation } from '@opentelemetry/instrumentation'
-import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node'
-import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-base'
-import { OTLPTraceExporter } from '@opentelemetry/exporter-otlp-http'
-import { registerInstrumentations } from '@opentelemetry/instrumentation'
+# instrumentation.ts
+import { NodeTracerProvider } from '@opentelemetry/node';
+import { ConsoleSpanExporter, SimpleSpanProcessor } from '@opentelemetry/tracing';
+import { registerInstrumentations } from '@opentelemetry/instrumentation';
 
-const provider = new NodeTracerProvider({
-  // config for the tracer
-})
-const exporter = new OTLPTraceExporter({
-  url: 'http://tempo:4317',
-})
-provider.addSpanProcessor(new SimpleSpanProcessor(exporter))
-provider.register()
+const provider = new NodeTracerProvider();
+const exporter = new ConsoleSpanExporter();
+const spanProcessor = new SimpleSpanProcessor(exporter);
 
-// For Next.js 13+, use instrumentation.ts with instrumentationHook
-// For other versions, use the following
-import { instrument } from '@opentelemetry/instrumentation'
-instrument({
+provider.addSpanProcessor(spanProcessor);
+registerInstrumentations({
   instrumentations: [
-    // Add instrumentations for MongoDB, etc.
-  ],
-})
+    '@opentelemetry/instrumentation-http',
+    '@opentelemetry/instrumentation-express'
+  ]
+});

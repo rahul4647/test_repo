@@ -2,33 +2,32 @@ version: '3.9'
 services:
   app:
     build: .
+    environment:
+      - NODE_ENV=production
     ports:
       - "3000:3000"
     depends_on:
       - mongo
-    environment:
-      - NODE_ENV=production
     healthcheck:
       test: ["curl", "--fail", "http://localhost:3000/health"]
-      interval: 10s
+      interval: 30s
       timeout: 5s
       retries: 3
     volumes:
-      - ./:/app
+      - .:/app
     env_file:
       - .env
   mongo:
-    image: mongo:6@sha256:5e3ccce1e91c9f7f1c8f4c0e0d2a9f0f0d2a9f0f0d2a9f0
+    image: mongo:6.0.3@sha256:4b5c8e9a2f2c9f2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e
     volumes:
       - mongo-data:/data/db
     healthcheck:
-      test: ["curl", "--fail", "http://localhost:27017"]
-      interval: 10s
+      test: ["mongo", "--eval", "db.runCommand({ ping: 1 })"]
+      interval: 30s
       timeout: 5s
       retries: 3
 volumes:
   mongo-data:
-
 networks:
   default:
-    name: my-network
+    driver: bridge
