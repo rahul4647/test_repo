@@ -1,4 +1,4 @@
-name: Deployment Pipeline
+name: Deploy Pipeline
 
 on:
   workflow_run:
@@ -7,59 +7,64 @@ on:
       - completed
 
 jobs:
-  staging_deploy:
-    name: Deploy to Staging
+  deploy-to-staging:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
         with:
-          role-to-assume: arn:aws:iam::123456789012:role/OIDC-Role
+          role-to-assume: arn:aws:iam::123456789012:role/my-github-actions-role
           aws-region: us-east-1
-
       - name: Deploy to ECS
         run: |
-          aws ecs update-service --cluster your-cluster-name --service your-service-name --force-new-deployment --region us-east-1
+          aws ecs update-service --cluster my-staging-cluster --service my-service --force-new-deployment --region us-east-1
+      - name: Wait for service stability
+        run: |
+          aws ecs wait services-stable --cluster my-staging-cluster --services my-service --region us-east-1
 
-  smoke_test:
-    name: Smoke Test
+  smoke-test:
     runs-on: ubuntu-latest
-    needs: staging_deploy
+    needs: deploy-to-staging
     steps:
       - name: Run Playwright tests
-        run: npm run test:smoke
+        run: |
+          npm run test:e2e
+        env:
+          BASE_URL: https://staging.example.com
 
-  production_deploy:
-    name: Deploy to Production
+  deploy-to-production:
     runs-on: ubuntu-latest
-    needs: smoke_test
-    if: ${{ success() }}
+    needs: smoke-test
     environment:
       name: production
-      url: https://your-production-url.com
+      url: https://production.example.com
     steps:
+      - name: Manual approval
+        run: echo "Deployment approved."
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
         with:
-          role-to-assume: arn:aws:iam::123456789012:role/OIDC-Role
+          role-to-assume: arn:aws:iam::123456789012:role/my-github-actions-role
           aws-region: us-east-1
-
       - name: Deploy to ECS
         run: |
-          aws ecs update-service --cluster your-cluster-name --service your-service-name --force-new-deployment --region us-east-1
+          aws ecs update-service --cluster my-production-cluster --service my-service --force-new-deployment --region us-east-1
+      - name: Health check
+        run: |
+          aws ecs wait services-stable --cluster my-production-cluster --services my-service --region us-east-1
 
   rollback:
-    name: Rollback on Failure
     runs-on: ubuntu-latest
     if: failure()
+    needs: deploy-to-production
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
         with:
-          role-to-assume: arn:aws:iam::123456789012:role/OIDC-Role
+          role-to-assume: arn:aws:iam::123456789012:role/my-github-actions-role
           aws-region: us-east-1
-
-      - name: Rollback ECS
+      - name: Roll back to previous revision
         run: |
-          aws ecs update-service --cluster your-cluster-name --service your-service-name --force-new-deployment --region us-east-1
+          aws ecs update-service --cluster my-production-cluster --service my-service --desired-count 0 --region us-east-1
+          aws ecs update-service --cluster my-production-cluster --service my-service --desired-count 1 --region us-east-1

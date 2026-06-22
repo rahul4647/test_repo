@@ -1,11 +1,6 @@
 output "vpc_id" {
-  description = "The VPC ID."
+  description = "The ID of the VPC."
   value       = module.networking.vpc_id
-}
-
-output "ecs_cluster_id" {
-  description = "The ECS Cluster ID."
-  value       = module.compute.ecs_cluster_id
 }
 
 output "alb_dns_name" {
@@ -14,6 +9,6 @@ output "alb_dns_name" {
 }
 
 output "db_endpoint" {
-  description = "The endpoint of the database."
-  value       = module.database.db_endpoint
+  description = "The connection endpoint for the DocumentDB cluster."
+  value       = module.database.endpoint
 }

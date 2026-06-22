@@ -10,80 +10,66 @@ on:
 
 jobs:
   test:
-    name: Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
-
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8
         with:
-          node-version: 20.x
-
-      - name: Cache NPM dependencies
+          node-version: '20.x'
+      - name: Cache dependencies
         uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea30f
         with:
           path: ~/.npm
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
-
       - name: Install dependencies
-        run: npm ci
-
+        run: npm install
       - name: Run linter
         run: npm run lint
-
-      - name: Run unit tests
-        run: npm test -- --coverage
-
+      - name: Run tests
+        run: npm run test -- --coverage --watchAll=false
       - name: Check coverage
         run: |
-          coverage=$(npm run coverage --silent)
-          if [ "$coverage" -lt 80 ]; then
-            echo "Coverage is below 80%";
-            exit 1;
-          fi
+          npx nyc report --check-coverage --lines=${{ env.COVERAGE_THRESHOLD }}
+        env:
+          COVERAGE_THRESHOLD: 80
 
   security:
-    name: Security
     runs-on: ubuntu-latest
+    needs: test
     steps:
       - name: Checkout code
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
-
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8
         with:
-          node-version: 20.x
-
-      - name: Run npm audit
+          node-version: '20.x'
+      - name: Install dependencies
+        run: npm install
+      - name: Audit dependencies
         run: npm audit --audit-level=critical
-
-      - name: Run secret scanning
-        uses: trufflesecurity/trufflehog@v0.0.3
+      - name: Secret scanning
+        uses: zricethezav/gitleaks-action@v1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          args: "--config-path=.gitleaks.toml"
 
   build:
-    name: Build
     runs-on: ubuntu-latest
-    needs: [test, security]
+    needs: security
     steps:
       - name: Checkout code
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@885d1462b80bc1c1c7f0b00334ad271f09369c55
-
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build and push Docker image
         uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56
         with:

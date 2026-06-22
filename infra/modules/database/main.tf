@@ -1,28 +1,31 @@
 resource "aws_docdb_cluster" "main" {
-  cluster_identifier      = "main-db"
-  engine                  = "docdb"
-  master_username         = "username"
-  master_user_password    = "${var.db_password}"
-  db_subnet_group_name    = "${aws_docdb_subnet_group.main.id}"
+  cluster_identifier      = "docdb-cluster"
+  engine_version          = "4.0.0"
+  master_username         = "admin"
+  master_password         = "${var.master_password}"
   backup_retention_period = 7
   preferred_backup_window = "07:00-09:00"
   storage_encrypted       = true
   deletion_protection     = true
-}
+  skip_final_snapshot     = false
 
-resource "aws_docdb_subnet_group" "main" {
-  name       = "main-db-subnet-group"
-  subnet_ids = module.networking.subnet_ids
-
-  tags = {
-    Name = "main-db-subnet-group"
-  }
+  vpc_security_group_ids = [aws_security_group.db_sg.id]
 }
 
 resource "aws_docdb_cluster_instance" "main" {
-  identifier         = "main-db-instance"
+  count              = 1
+  identifier         = "docdb-instance-${count.index}"
   cluster_identifier = aws_docdb_cluster.main.id
   instance_class     = var.db_instance_class
+}
 
-  apply_immediately = true
+resource "aws_security_group" "db_sg" {
+  vpc_id = module.networking.vpc_id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = []
+  }
 }

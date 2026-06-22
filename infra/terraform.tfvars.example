@@ -1,5 +1,5 @@
-aws_region = "us-east-1"
-app_port   = 3000
-db_port    = 27017
-db_storage = 20
+region = "us-east-1"
+app_port = 3000
+db_port = 27017
 db_instance_class = "db.t3.micro"
+db_storage = 20

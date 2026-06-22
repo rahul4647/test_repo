@@ -1,8 +1,17 @@
-import { registerOTel } from '@vercel/otel-nextjs';
+// instrumentation.ts
+import { registerInstrumentations } from '@opentelemetry/instrumentation';
+import { NodeTracerProvider } from '@opentelemetry/node';
+import { SimpleSpanProcessor } from '@opentelemetry/tracing';
+import { CollectorTraceExporter } from '@opentelemetry/exporter-collector';
 
-registerOTel({
-  serviceName: 'nextjs-app',
-  instrumentationHook: () => {
-    // Additional instrumentation can be added here
-  }
+const provider = new NodeTracerProvider();
+const exporter = new CollectorTraceExporter({
+  url: 'http://tempo:4317',
+});
+
+provider.addSpanProcessor(new SimpleSpanProcessor(exporter));
+provider.register();
+
+registerInstrumentations({
+  tracerProvider: provider,
 });

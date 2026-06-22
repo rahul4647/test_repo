@@ -1,29 +1,29 @@
-variable "aws_region" {
-  description = "The AWS region to deploy to."
+variable "region" {
+  description = "The AWS region to deploy resources in."
   type        = string
   default     = "us-east-1"
 }
 
 variable "app_port" {
-  description = "The port the application will run on."
+  description = "The port the application listens on."
   type        = number
   default     = 3000
 }
 
 variable "db_port" {
-  description = "The port the database will run on."
+  description = "The port the DocumentDB instance listens on."
   type        = number
   default     = 27017
 }
 
-variable "db_storage" {
-  description = "The storage size for the database."
-  type        = number
-  default     = 20
-}
-
 variable "db_instance_class" {
-  description = "The instance class for the database."
+  description = "The instance class for DocumentDB."
   type        = string
   default     = "db.t3.micro"
+}
+
+variable "db_storage" {
+  description = "The storage size for DocumentDB in gigabytes."
+  type        = number
+  default     = 20
 }
