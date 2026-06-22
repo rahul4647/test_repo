@@ -1,0 +1,67 @@
+name: Deploy Pipeline
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types:
+      - completed
+
+jobs:
+  staging_deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Assume AWS Role
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/MyGitHubOIDCRole
+          aws-region: us-east-1
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service --cluster my-cluster --service my-staging-service --force-new-deployment
+      - name: Wait for service stability
+        run: |
+          aws ecs wait services-stable --cluster my-cluster --services my-staging-service
+
+  smoke_test:
+    runs-on: ubuntu-latest
+    needs: staging_deploy
+    steps:
+      - name: Run Playwright tests
+        run: npm run test:e2e
+
+  production_deploy:
+    runs-on: ubuntu-latest
+    needs: smoke_test
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Manual approval
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { GITHUB_TOKEN } = process.env;
+            const octokit = github.getOctokit(GITHUB_TOKEN);
+            const { data } = await octokit.request('POST /repos/{owner}/{repo}/actions/runs/{run_id}/approve', {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId
+            });
+      - name: Deploy to ECS Production
+        run: |
+          aws ecs update-service --cluster my-cluster --service my-production-service --force-new-deployment
+      - name: Wait for service stability
+        run: |
+          aws ecs wait services-stable --cluster my-cluster --services my-production-service
+
+  rollback:
+    runs-on: ubuntu-latest
+    if: failure()
+    steps:
+      - name: Assume AWS Role
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/MyGitHubOIDCRole
+          aws-region: us-east-1
+      - name: Rollback ECS Service
+        run: |
+          aws ecs update-service --cluster my-cluster --service my-production-service --force-new-deployment --rollback
