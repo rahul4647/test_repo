@@ -1,16 +1,19 @@
-# instrumentation.ts
-import { NodeTracerProvider } from '@opentelemetry/node';
-import { ConsoleSpanExporter, SimpleSpanProcessor } from '@opentelemetry/tracing';
+import { tracing } from '@opentelemetry/sdk-trace-base';
+import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
+import { ConsoleSpanExporter, SimpleSpanProcessor } from '@opentelemetry/sdk-trace-base';
 import { registerInstrumentations } from '@opentelemetry/instrumentation';
 
 const provider = new NodeTracerProvider();
 const exporter = new ConsoleSpanExporter();
-const spanProcessor = new SimpleSpanProcessor(exporter);
+provider.addSpanProcessor(new SimpleSpanProcessor(exporter));
+provider.register();
 
-provider.addSpanProcessor(spanProcessor);
-registerInstrumentations({
+import { instrumentationHook } from '@opentelemetry/instrumentation-next';
+instrumentationHook({
+  tracerProvider: provider,
   instrumentations: [
+    '@opentelemetry/instrumentation-express',
     '@opentelemetry/instrumentation-http',
-    '@opentelemetry/instrumentation-express'
-  ]
+    '@opentelemetry/instrumentation-mongodb',
+  ],
 });
