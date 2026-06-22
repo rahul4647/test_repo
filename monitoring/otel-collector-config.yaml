@@ -1,0 +1,38 @@
+receivers:
+  otlp:
+    protocol: http
+    host: 0.0.0.0
+    port: 4317
+exporters:
+  otlp/tempo:
+    endpoint: http://tempo:4317
+    insecure: true
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    namespace: nextjs-app
+  loki:
+    endpoint: http://loki:3100/loki/api/v1/push
+    username: ""
+    password: ""
+    tenant_id: ""
+    labels:
+      job: "nextjs-app"
+      __system__: "nextjs-app"
+processors:
+  batch:
+    timeout: 10s
+    send_batch_size: 10000
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [otlp/tempo]
+      processors: [batch]
+    metrics:
+      receivers: [otlp]
+      exporters: [prometheus]
+      processors: [batch]
+    logs:
+      receivers: [otlp]
+      exporters: [loki]
+      processors: [batch]
