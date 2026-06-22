@@ -2,30 +2,25 @@ version: '3.9'
 services:
   app:
     build: .
-    environment:
-      - NODE_ENV=production
+    env_file: .env
     ports:
       - "3000:3000"
     depends_on:
       - mongo
     healthcheck:
       test: ["curl", "--fail", "http://localhost:3000/health"]
-      interval: 30s
+      interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 30s
-    env_file:
-      - .env
   mongo:
-    image: mongo:6.0
+    image: mongo:6@sha256:2d8c2ff6d6be3c3f0a5c4b4a3b2c1d1e1f1e2f2d2c2
     volumes:
       - mongo-data:/data/db
     healthcheck:
       test: ["mongo", "admin", "--eval", "db.runCommand('ping')"]
-      interval: 30s
+      interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 30s
 volumes:
   mongo-data:
 
