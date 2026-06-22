@@ -1,0 +1,1 @@
+db.collection('community').createIndex({ id: 1 }, { unique: true });
