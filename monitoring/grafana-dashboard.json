@@ -1,0 +1,62 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": null,
+    "title": "Next.js App Dashboard",
+    "tags": [ "templated" ],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 0,
+    "refresh": "5s",
+    "panels": [
+      {
+        "type": "graph",
+        "title": "Request Latency",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.9, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+            "interval": "",
+            "refId": "A"
+          }
+        ],
+        "id": 1
+      },
+      {
+        "type": "graph",
+        "title": "Error Rate",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{status_code=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m]))",
+            "interval": "",
+            "refId": "B"
+          }
+        ],
+        "id": 2
+      },
+      {
+        "type": "graph",
+        "title": "Request Rate",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total[5m]))",
+            "interval": "",
+            "refId": "C"
+          }
+        ],
+        "id": 3
+      },
+      {
+        "type": "graph",
+        "title": "CPU Saturation",
+        "targets": [
+          {
+            "expr": "node_load1 / count(count(node_cpu_seconds_total) by (cpu)) * 100",
+            "interval": "",
+            "refId": "D"
+          }
+        ],
+        "id": 4
+      }
+    ]
+  }
+}
